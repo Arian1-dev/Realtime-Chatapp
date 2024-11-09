@@ -94,3 +94,39 @@ def create_groupchat(request):
         'form':form
     }
     return render(request, 'a_rtchat/create_groupchat.html', context)
+@login_required
+def chatroom_edit_view(request, chatroom_name):
+    chat_group= get_object_or_404(ChatGroup, group_name=chatroom_name)
+    if request.user != chat_group.admin:
+        raise Http404()
+    form=ChatRoomEditForm(instance=chat_group)
+    if request.method=='POST':
+        form=ChatRoomEditForm(request.POST, instance=chat_group)
+        if form.is_valid():
+            form.save()
+            
+            remove_members= request.POST.getlist('remove_members')
+            for member_id in remove_members:
+                member= User.objects.get(id=member_id)
+                chat_group.members.remove(member)
+                
+            return redirect('chatroom', chatroom_name)    
+
+    context={
+        'form': form,
+        'chat_group': chat_group
+        
+    }
+    return render(request, 'a_rtchat/chatroom_edit.html', context)
+@login_required
+def chatroom_delete_view(request, chatroom_name):
+    chat_group=get_object_or_404(ChatGroup, group_name=chatroom_name)
+    if request.user !=chat_group.admin:
+        raise Http404()
+    if request.method== "POST":
+        chat_group.delete()
+        messages.success(request,'Chatroom deleted')
+        return redirect('home')
+
+        
+    return render(request, 'a_rtchat/chatroom_delete.html',{'chat_group': chat_group})
